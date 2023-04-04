@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
+    <title>Document</title>
+</head>
+<body>
+    <form id="new-todo-form">
+        <input id="new-todo-content"/>
+        <button>Add to List</button>
+    </form>
+    <ul id="todo-list">
+    </ul>
+    <button id="clear-button">Clear the completed</button>
+
+    <script>
+
+        const todoListElement = document.getElementById("todo-list");
+        const newToDoFormElement = document.getElementById("new-todo-form");
+        const newToDoContentElement = document.getElementById("new-todo-content");
+        const clearButton = document.getElementById("clear-button");
+
+
+        const getToDo = () => {
+            todoListElement.innerHTML = "";
+
+            fetch("/todos")
+                .then(x => x.json())
+                .then(items => {
+                    items.forEach(item => {
+                        let itemElement = document.createElement("li");
+                        
+                        if (item.isCompleted)
+                        {
+                            itemElement.classList.add("is-completed");
+                        }
+
+                        drawToDo(itemElement, item);
+
+                        itemElement.addEventListener("click", () => {
+                            fetch("/checktodos", {
+                                method: "POST",
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({id: item.id, isCompleted: !item.isCompleted})
+                            })
+                            .then(() => {
+                                item.isCompleted = !item.isCompleted;
+                                itemElement.classList.toggle("is-completed");
+                                drawToDo(itemElement, item);
+                                moveCompletedToEnd();
+                            })
+                            .catch(error => {
+                                alert(error);
+                            });
+                        });
+                        
+                        todoListElement.append(itemElement);
+                    });
+
+                    moveCompletedToEnd();
+                })
+        };
+
+        const moveCompletedToEnd = () => {
+            const todoListChildren = Array.from(todoListElement.children);
+            const incompleteItemElements = todoListChildren.filter(element => !element.classList.contains("is-completed"));
+            const completedItemElements = todoListChildren.filter(element => element.classList.contains("is-completed"));
+            todoListElement.innerHTML = "";
+            completedItemElements.forEach(item => todoListElement.appendChild(item));
+            incompleteItemElements.forEach(item => todoListElement.appendChild(item));
+        }
+
+        const drawToDo = (itemElement, item) => {
+            itemElement.innerHTML = item.isCompleted ? `
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>${item.content}</span>
+            ` : `
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M 21 12 C 21 18.928 13.5 23.258 7.5 19.794 C 4.715 18.187 3 15.215 3 12 C 3 5.072 10.5 0.742 16.5 4.206 C 19.285 5.813 21 8.785 21 12 Z" />
+                </svg>
+                <span>${item.content}</span>
+            `;
+        }
+
+        getToDo();
+        
+        newToDoFormElement.addEventListener("submit", e => {
+            e.preventDefault();
+            fetch("/todos", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({content: newToDoContentElement.value})
+            })
+            .then(() => {
+                newToDoFormElement.reset();
+                getToDo();
+            });
+        })
+
+        
+        clearButton.addEventListener("click", ()=> {
+            fetch("/removecompletedtodos", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+                })
+            .then(() => {
+                getToDo();
+            })
+        })
+        
+    </script>
+</body>
+</html>

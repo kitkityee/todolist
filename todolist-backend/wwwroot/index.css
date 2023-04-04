@@ -1,0 +1,10 @@
+li {
+    display: flex;
+    align-items: center;
+}
+
+svg {
+    width: 24px;
+    padding-right: 8px;
+}
+
